@@ -99,6 +99,16 @@ DATABASES = {
 }
 
 
+CLOUDINARY_STORAGE = {
+    "cloud_name": "dzpr6z2z5",
+    "api_key": "539549775893276",
+    "api_secret": "4gCHTXIzejMtEiWJobfcaKKM8J4",
+}
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE["cloud_name"],
+    api_key=CLOUDINARY_STORAGE["api_key"],
+    api_secret=CLOUDINARY_STORAGE["api_secret"],
+)
 # DATABASES = {
 #     "default": {
 #         "ENGINE": "django.db.backends.mysql",
@@ -183,9 +193,4 @@ REST_FRAMEWORK = {
 }
 # CLOUDINARY_URL = "cloudinary://539549775893276:4gCHTXIzejMtEiWJobfcaKKM8J4@dzpr6z2z5"
 
-CLOUDINARY_STORAGE = {
-    "cloud_name": "dzpr6z2z5",
-    "api_key": "539549775893276",
-    "api_secret": "4gCHTXIzejMtEiWJobfcaKKM8J4",
-}
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
