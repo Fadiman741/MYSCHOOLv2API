@@ -1,20 +1,9 @@
 from rest_framework import serializers
-from .models import (
-    User,
-    Announcement,
-    Post,
-    Comment,
-    Message,
-    UserProfile,
-    Notification,
-    Grade,
-    Subject,
-    Subtopic,
-    Thread
+from .models import ( User, Grade, Subject)
 
-)
+from .models import Announcement, AnnouncementLike, AnnouncementComment, AnnouncementCommentLike, AnnouncementReply, AnnouncementReplyLike
 
-
+# ============= USER ========================================================================================================
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -25,21 +14,114 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {"password": {"write_only": True}}
 
-
-class AnnouncementSerialiazer(serializers.ModelSerializer):
-    user = UserSerializer()
+# ============= ANNOUCEMENT ========================================================================================================
+class AnnouncementSerializer(serializers.ModelSerializer):
+    like_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Announcement
-        fields = ["id", "user", "title", "description", "datecreated","image",
-            "video",
-            "tagged_friends",
-            "feeling"]
-        ordering = ["-datecreated"]
+        fields = ['id', 'user', 'description', 'title', 'datecreated', 'image', 'video', 'tagged_friends', 'feeling', 'like_count']
 
-    def __str__(self):
-        return self.user
+    def get_like_count(self, obj):
+        return obj.like_count
 
+class AnnouncementLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnnouncementLike
+        fields = ['id', 'user', 'announcement', 'created_at']
+
+class AnnouncementCommentSerializer(serializers.ModelSerializer):
+    like_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AnnouncementComment
+        fields = ['id', 'user', 'announcement', 'content', 'created_at', 'parent_comment', 'like_count']
+
+    def get_like_count(self, obj):
+        return obj.like_count
+
+class AnnouncementCommentLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnnouncementCommentLike
+        fields = ['id', 'user', 'comment', 'created_at']
+
+class AnnouncementReplySerializer(serializers.ModelSerializer):
+    like_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AnnouncementReply
+        fields = ['id', 'user', 'comment', 'content', 'created_at', 'like_count']
+
+    def get_like_count(self, obj):
+        return obj.like_count
+
+class AnnouncementReplyLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnnouncementReplyLike
+        fields = ['id', 'user', 'reply', 'created_at']
+    
+# ============= POST ========================================================================================================
+# class PostLikeSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = PostLike
+#         fields = ['id', 'user', 'post', 'created_at']
+
+# class PostSerializer(serializers.ModelSerializer):
+#     post_likes = PostLikeSerializer(many=True, read_only=True)
+#     like_count = serializers.SerializerMethodField()
+
+#     class Meta:
+#         model = Post
+#         fields = ['id', 'user', 'content', 'created_at', 'comments', 'grade', 'subject', 'image', 'feeling', 'tagged_friends', 'post_likes', 'like_count']
+
+#     def get_like_count(self, obj):
+#         return obj.like_count
+
+# ============= REPLY ========================================================================================================
+
+# class ReplyLikeSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ReplyLike
+#         fields = ['id', 'user', 'reply', 'created_at']
+
+# class ReplySerializer(serializers.ModelSerializer):
+#     reply_likes = ReplyLikeSerializer(many=True, read_only=True)
+#     like_count = serializers.SerializerMethodField()
+#     class Meta:
+#         model = Reply
+#         fields = ['id', 'user', 'comment', 'content', 'created_at']
+
+# # ============= ANNOUCEMENT COMMENTS ========================================================================================================
+
+# class CommentSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Comment
+#         fields = ['id', 'user', 'announcement', 'content', 'created_at']
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ===============================================================================================================================
 class GradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Grade
@@ -50,111 +132,9 @@ class SubjectSerializer(serializers.ModelSerializer):
         model = Subject
         fields = '__all__'
 
-class SubtopicSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Subtopic
-        fields = '__all__'
-
-
-
-class PostSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    # content = serializers.CharField()
-    class Meta:
-        model = Post
-        fields = [
-            'id', 
-            'user', 
-            'content', 
-            'created_at', 
-            'likes', 
-            'comments', 
-            'grade', 
-            'subject', 
-            'image', 
-            'feeling', 
-            'tagged_friends'
-        ]
-        read_only_fields = ['user', 'created_at', 'likes', 'comments']
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class PostSerializer(serializers.ModelSerializer):
-#     user = UserSerializer()
-#     # grade = GradeSerializer()
-#     # Subject = SubjectSerializer()
-    
+# class UserProfileSerializer(serializers.ModelSerializer):
 #     class Meta:
-        
-#         model = Post
-#         # contents =serializers.CharField()
+#         model = UserProfile
 #         fields = "__all__"
-#         # ordering = ["-datecreated"]
 
-
-class CommentSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    post = PostSerializer()
-
-    class Meta:
-        model = Comment
-        fields = [
-            "id",
-            "user",
-            "post",
-            "content",
-            "created_at",
-            "likes",
-            "unlikes",
-            # "comments",
-        ]
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserProfile
-        fields = "__all__"
-
-
-class MessageSerializer(serializers.ModelSerializer):
-    sender = serializers.SlugRelatedField(
-        many=False, slug_field="username", queryset=User.objects.all()
-    )
-    receiver = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    # receiver = serializers.SlugRelatedField(
-    #     many=False, slug_field="username", queryset=User.objects.all()
-    # )
-
-    class Meta:
-        model = Message
-        fields = "__all__"
-
-
-class NotificationSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    class Meta:
-        model = Notification
-        fields = "__all__"
-
-# ================================================================================================================================
-class ThreadSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Thread
-        fields = "__all__"
-# -------------------------------------------------------------------------------------------------------------------------
+# ===============================================================================================================================

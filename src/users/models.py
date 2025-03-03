@@ -1,12 +1,6 @@
 import datetime
 import random
 import uuid
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from django.db import models
-
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 import random
@@ -32,7 +26,6 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(email, password, **extra_fields)
-
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -74,14 +67,23 @@ class User(AbstractUser):
             self.username = f"{self.first_name}{self.last_name}{random_number}"
         super().save(*args, **kwargs)
 
+# =========  GRADES & SUBJECTS ==================================================================================
+class Grade(models.Model):
+    name = models.CharField(max_length=50)
+    def __str__(self):
+        return f"{self.name} "
+class Subject(models.Model):
+    name = models.CharField(max_length=100)
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.name}  :  {self.grade} "
+# =========  ANNOUCEMENT ======================================================================================
 class Announcement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        User, related_name="announcements", on_delete=models.CASCADE
-    )
+    user = models.ForeignKey(User, related_name="announcements", on_delete=models.CASCADE)
     description = models.TextField()
-    title = models.CharField(max_length=100,null=True, blank=True)
+    title = models.CharField(max_length=100, null=True, blank=True)
     datecreated = models.DateTimeField(auto_now_add=True)
     image = cloudinary.models.CloudinaryField("", null=True, blank=True)
     video = cloudinary.models.CloudinaryField("", null=True, blank=True)
@@ -98,122 +100,275 @@ class Announcement(models.Model):
     )
 
     def __str__(self):
-        return f"{self.user} : {self.title} "
+        return f"{self.user} : {self.title}"
 
-class Grade(models.Model):
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return f"{self.name} "
-
-class Subject(models.Model):
-    name = models.CharField(max_length=100)
-    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.name}  :  {self.grade} "
-class Subtopic(models.Model):
-    name = models.CharField(max_length=100)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-
-
-class Post(models.Model):
+    @property
+    def like_count(self):
+        """Returns the total number of likes for this announcement."""
+        return self.announcement_likes.count()
+class AnnouncementLike(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
-    content = models.TextField(null=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    likes = models.IntegerField(default=0, null=True)
-    # unlikes = models.IntegerField(default=0, null=True)
-    comments = models.IntegerField(default=0, null=True)
-    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, null=True)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True)
-    image = cloudinary.models.CloudinaryField('', null=True, blank=True)  # For post image
-    feeling = models.CharField(max_length=50, null=True, blank=True)  # For feeling (e.g., happy, sad)
-    tagged_friends = models.ManyToManyField(User, related_name="tagged_posts", blank=True)  # For tagging friends
-
-    def __str__(self):
-        return f"{self.user} : {self.content}"
-
-class Comment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user")
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    content = models.TextField(null=False)
-    likes = models.IntegerField( default=0, null=True)
-    unlikes = models.IntegerField(default=0, null=True)
-    # comments = models.IntegerField(default=0, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_likes")
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name="announcement_likes")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return 'Comment by {} - {}'.format(self.user, self.content)
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-
-
-class Message(models.Model):
-    sender = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="sent_messages"
-    )
-    recipient = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="received_messages"
-    )
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.content
-
-
-class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    content = models.TextField(max_length=255, default="Notification")
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=0, null=False)
-
-    def __str__(self):
-        return self.content
-
-# ===========================================================================================================================================================
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.db.models import Q
-
-User = get_user_model()
-
-# Create your models here.
-
-class ThreadManager(models.Manager):
-    def by_user(self, **kwargs):
-        user = kwargs.get('user')
-        lookup = Q(first_person=user) | Q(second_person=user)
-        qs = self.get_queryset().filter(lookup).distinct()
-        return qs
-
-
-class Thread(models.Model):
-    first_person = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='thread_first_person')
-    second_person = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,related_name='thread_second_person')
-    updated = models.DateTimeField(auto_now=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    objects = ThreadManager()
     class Meta:
-        unique_together = ['first_person', 'second_person']
-
-        def __str__(self):
-            return self.unique_together
-
-
-class ChatMessage(models.Model):
-    thread = models.ForeignKey(Thread, null=True, blank=True, on_delete=models.CASCADE, related_name='chatmessage_thread')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    message = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+        unique_together = ('user', 'announcement')  # Ensures a user can like an announcement only once
 
     def __str__(self):
-        return self.message
+        return f"{self.user} liked {self.announcement}"  
+# =========  ANNOUCEMENT COMMENT ==============================================================================
+class AnnouncementComment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_comments")
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name="announcement_comments")
+    content = models.TextField()
+    image = cloudinary.models.CloudinaryField("", null=True, blank=True)
+    video = cloudinary.models.CloudinaryField("", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name="replies")  # For nested comments
+
+    def __str__(self):
+        return f"{self.user} commented on {self.announcement}: {self.content}"
+
+    @property
+    def like_count(self):
+        """Returns the total number of likes for this comment."""
+        return self.announcement_comment_likes.count()
+class AnnouncementCommentLike(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_comment_likes")
+    comment = models.ForeignKey(AnnouncementComment, on_delete=models.CASCADE, related_name="announcement_comment_likes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'comment')  # Ensures a user can like a comment only once
+
+    def __str__(self):
+        return f"{self.user} liked {self.comment}"
+# ========= ANNOUCEMENT REPLY =================================================================================
+class AnnouncementReply(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_replies")
+    comment = models.ForeignKey('AnnouncementComment', on_delete=models.CASCADE, related_name="replies")
+    content = models.TextField()
+    image = cloudinary.models.CloudinaryField("", null=True, blank=True)
+    video = cloudinary.models.CloudinaryField("", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} replied to {self.comment}: {self.content}"
+
+    @property
+    def like_count(self):
+        """Returns the total number of likes for this reply."""
+        return self.announcement_reply_likes.count()
+class AnnouncementReplyLike(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_reply_likes")
+    reply = models.ForeignKey(AnnouncementReply, on_delete=models.CASCADE, related_name="announcement_reply_likes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'reply')  # Ensures a user can like a reply only once
+
+    def __str__(self):
+        return f"{self.user} liked {self.reply}"
     
-# ------------------------------------------------------------------------------------------------------
+# ===============================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==========    POST  ===========================================================================================
+# class Post(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+#     content = models.TextField(null=False)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     comments = models.IntegerField(default=0, null=True)
+#     grade = models.ForeignKey('Grade', on_delete=models.CASCADE, null=True)  # Assuming Grade is another model
+#     subject = models.ForeignKey('Subject', on_delete=models.CASCADE, null=True)  # Assuming Subject is another model
+#     image = cloudinary.models.CloudinaryField('', null=True, blank=True)  # For post image
+#     feeling = models.CharField(max_length=50, null=True, blank=True)  # For feeling (e.g., happy, sad)
+#     tagged_friends = models.ManyToManyField(User, related_name="tagged_posts", blank=True)  # For tagging friends
+
+#     def __str__(self):
+#         return f"{self.user} : {self.content}"
+
+#     @property
+#     def like_count(self):
+#         """Returns the total number of likes for this post."""
+#         return self.post_likes.count()
+# class PostLike(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_likes")
+#     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="post_likes")
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     class Meta:
+#         unique_together = ('user', 'post')  # Ensures a user can like a post only once
+
+#     def __str__(self):
+#         return f"{self.user} liked {self.post}"
+# # ===========  POST COMMMENT ====================================================================================
+# class PostComment(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_comments")
+#     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="post_comments")
+#     content = models.TextField()
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name="replies")  # For nested comments
+
+#     def __str__(self):
+#         return f"{self.user} commented on {self.post}: {self.content}"
+
+#     @property
+#     def like_count(self):
+#         """Returns the total number of likes for this comment."""
+#         return self.post_comment_likes.count()
+# class PostCommentLike(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_comment_likes")
+#     comment = models.ForeignKey(PostComment, on_delete=models.CASCADE, related_name="post_comment_likes")
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         unique_together = ('user', 'comment')  # Ensures a user can like a comment only once
+
+#     def __str__(self):
+#         return f"{self.user} liked {self.comment}"
+
+# # ========= POST REPLY  ========================================================================================
+# class PostReply(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     comment = models.ForeignKey(PostComment, related_name="replies", on_delete=models.CASCADE)
+#     reply = models.TextField()
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return 'Reply by {} - {}'.format(self.user, self.reply)
+# class PostReplyLike(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_likes")
+#     reply = models.ForeignKey(PostReply, on_delete=models.CASCADE, related_name="reply_likes")
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     class Meta:
+#         unique_together = ('user', 'reply')  # Ensures a user can like a post only once
+
+#     def __str__(self):
+#         return f"{self.user} liked {self.reply}"
