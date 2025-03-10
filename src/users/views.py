@@ -7,18 +7,19 @@ from rest_framework.decorators import ( api_view,permission_classes, authenticat
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.authtoken.models import Token
-# ====  USER & GRADES  ======================================================================================================
-from users.models import User, Grade, Subject, Subtopic
-from .serializers import ( UserSerializer,GradeSerializer, SubjectSerializer)
-# ====  ANNOUCEMENTS  =======================================================================================================
-from .models import Announcement, AnnouncementLike, AnnouncementComment, AnnouncementCommentLike, AnnouncementReply, AnnouncementReplyLike
-from .serializers import AnnouncementSerializer, AnnouncementLikeSerializer, AnnouncementCommentSerializer, AnnouncementCommentLikeSerializer, AnnouncementReplySerializer, AnnouncementReplyLikeSerializer
-# ====  POSTS  ==============================================================================================================
-
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authentication import TokenAuthentication
 
-# ====   UTHENTICATION  =====================================================================================================
+# ====  USER & GRADES  ======================================================================================================
+from users.models import User, Grade, Subject
+from .serializers import ( PostSerializer, UserSerializer,GradeSerializer, SubjectSerializer)
+# ====  ANNOUCEMENTS  =======================================================================================================
+from .models import Announcement, AnnouncementLike ,AnnouncementComment, AnnouncementCommentLike, AnnouncementReply, AnnouncementReplyLike, Post, PostReply, PostReplyLike
+from .serializers import AnnouncementSerializer, AnnouncementLikeSerializer,AnnouncementCommentSerializer, AnnouncementCommentLikeSerializer, AnnouncementReplySerializer, AnnouncementReplyLikeSerializer
+# ====  POSTS  ==============================================================================================================
+
+
+# ====   AUTHENTICATION  =====================================================================================================
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def signup(request):
@@ -195,8 +196,8 @@ def subject_detail(request, pk):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def announcement_list(request):
-    announcement = Announcement.objects.all()  # complex data
-    serializer = AnnouncementSerializer(announcement, many=True)
+    announcement = Announcement.objects.all().order_by('-datecreated') 
+    serializer = AnnouncementSerializer(announcement, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(["POST"])
@@ -258,7 +259,7 @@ def like_announcement(request, announcement_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def add_comment(request, announcement_id):
+def add_announcement_comment(request, announcement_id):
     try:
         announcement = Announcement.objects.get(id=announcement_id)
     except Announcement.DoesNotExist:
@@ -270,6 +271,19 @@ def add_comment(request, announcement_id):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def like_announcement_coment(request, announcement_comment_id):
+    try:
+        announcement_comment = AnnouncementComment.objects.get(id=announcement_comment_id)
+    except Announcement.DoesNotExist:
+        return Response({"error": "Announcement comment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    like, created = AnnouncementCommentLike.objects.get_or_create(user=request.user, announcement_comment=announcement_comment)
+    if not created:
+        like.delete()
+        return Response({"status": "unliked"}, status=status.HTTP_200_OK)
+    return Response({"status": "liked"}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -315,155 +329,137 @@ def like_announcement_reply(request, reply_id):
         'like_count': reply.like_count
     }, status=status.HTTP_200_OK)
 
+
+
+
 # =============================POSTS=================================
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def post_list_create(request,gradeID,subjectID ):
-#         user = request.user
-#         # print("Request data:", request.data)
-#         # grade_id = request.data.get('grade')
-#         # subject_id = request.data.get('subject')
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def post_list_create(request,gradeID,subjectID ):
+        user = request.user
+        # print("Request data:", request.data)
+        # grade_id = request.data.get('grade')
+        # subject_id = request.data.get('subject')
         
-#         try:
-#             grade = Grade.objects.get(id=gradeID)
-#             subject = Subject.objects.get(id=subjectID)
-#         except Grade.DoesNotExist:
-#             return Response({'error': 'Grade not found'}, status=status.HTTP_404_NOT_FOUND)
-#         except Subject.DoesNotExist:
-#             return Response({'error': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            grade = Grade.objects.get(id=gradeID)
+            subject = Subject.objects.get(id=subjectID)
+        except Grade.DoesNotExist:
+            return Response({'error': 'Grade not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Subject.DoesNotExist:
+            return Response({'error': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
 
-#         serializer = PostSerializer(data=request.data)
-#         Post.objects.create(**request.data, user=user,grade=grade, subject=subject)
-#         if serializer.is_valid():
-#             serializer.save(user=request.user, grade=grade, subject=subject)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PostSerializer(data=request.data)
+        Post.objects.create(**request.data, user=user,grade=grade, subject=subject)
+        if serializer.is_valid():
+            serializer.save(user=request.user, grade=grade, subject=subject)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# @api_view(['GET'])
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_posts_by_grade_and_subject(request, gradeId, subjectId, grade, subject):
+    
+
+    try:
+        posts = Post.objects.filter(grade=gradeId ,subject=subjectId)
+        print("The post works")
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Post.DoesNotExist:   
+        return Response({'error': 'No posts found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 # @permission_classes([AllowAny])
-# def get_posts_by_grade_and_subject(request, gradeId, subjectId, grade, subject):
+def post_detail_create(request, grade_id, subject_id):
+    try:
+        user = request.user
+        # grade_id = request.data.get('grade')
+        # subject_id = request.data.get('subject')
+
+        grade = Grade.objects.get(id=grade_id)
+        subject = Subject.objects.get(id=subject_id)
+    except Grade.DoesNotExist or Subject.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        posts = Post.objects.filter(grade=grade, subject=subject)
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user,grade=grade, subject=subject)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-#     try:
-#         posts = Post.objects.filter(grade=gradeId ,subject=subjectId)
-#         print("The post works")
-#         serializer = PostSerializer(posts, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#     except Post.DoesNotExist:   
-#         return Response({'error': 'No posts found'}, status=status.HTTP_404_NOT_FOUND)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_post(request):
+    user = request.user
 
-# @api_view(['GET', 'POST'])
+    serializer = PostSerializer(data=request.data)
+    Post.objects.create(**request.data, user=user)
+    if serializer.is_valid():
+        serializer.save(user=user)
+        return Response(serializer.data)
+    else:
+        return Response(serializer.errors)
+
+
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([AllowAny])
 # @permission_classes([IsAuthenticated])
-# # @permission_classes([AllowAny])
-# def post_detail_create(request, grade_id, subject_id):
-#     try:
-#         user = request.user
-#         # grade_id = request.data.get('grade')
-#         # subject_id = request.data.get('subject')
+def update_post(request, pk=id):
+    post = Post.objects.get(pk=pk)
+    if request.method == "GET":
+        serializer = PostSerializer(post)
+        return Response(serializer.data)
 
-#         grade = Grade.objects.get(id=grade_id)
-#         subject = Subject.objects.get(id=subject_id)
-#     except Grade.DoesNotExist or Subject.DoesNotExist:
-#         return Response(status=status.HTTP_404_NOT_FOUND)
-    
-#     if request.method == 'GET':
-#         posts = Post.objects.filter(grade=grade, subject=subject)
-#         serializer = PostSerializer(posts, many=True)
-#         return Response(serializer.data)
-    
-#     elif request.method == 'POST':
-#         serializer = PostSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(user=user,grade=grade, subject=subject)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+    if request.method == "PUT":
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
+    if request.method == "DELETE":
+        post.delete()
+        return Response("Post deleted successfull")
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def like_comment(request, comment_id):
+    try:
+        comment = PostComment.objects.get(id=comment_id)
+    except PostComment.DoesNotExist:
+        return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    # Check if the user has already liked the comment
+    if not PostCommentLike.objects.filter(user=request.user, comment=comment).exists():
+        PostCommentLike.objects.create(user=request.user, comment=comment)
+        return Response({'message': 'Comment liked successfully'}, status=status.HTTP_201_CREATED)
+    else:
+        return Response({'message': 'You have already liked this comment'}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def like_reply(request, reply_id):
+    try:
+        reply = PostReply.objects.get(id=reply_id)
+    except PostReply.DoesNotExist:
+        return Response({'error': 'Reply not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def create_post(request):
-#     user = request.user
-
-#     serializer = PostSerializer(data=request.data)
-#     Post.objects.create(**request.data, user=user)
-#     if serializer.is_valid():
-#         serializer.save(user=user)
-#         return Response(serializer.data)
-#     else:
-#         return Response(serializer.errors)
-
-
-# @api_view(["GET", "PUT", "DELETE"])
-# @permission_classes([AllowAny])
-# # @permission_classes([IsAuthenticated])
-# def update_post(request, pk=id):
-#     post = Post.objects.get(pk=pk)
-#     if request.method == "GET":
-#         serializer = PostSerializer(post)
-#         return Response(serializer.data)
-
-#     if request.method == "PUT":
-#         serializer = PostSerializer(post, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
-
-#     if request.method == "DELETE":
-#         post.delete()
-#         return Response("Post deleted successfull")
-
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def likepost(request, pk=id):
-#     post = Post.objects.get(pk=pk)
-#     if request.user not in post.likes.all():
-#         post.likes.add(request.user)
-#     if request.user in post.dislikes.all():
-#         post.dislikes.remove(request.user)
-#     post.save()
-#     return Response({"message": "Post liked successfully"})
-
-
-# # ====================================LOGIC============================
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-
-# def like_post(request, post_id):
-#     try:
-#         post = Post.objects.get(pk=post_id)
-#     except Post.DoesNotExist:
-#         return Response(status=status.HTTP_404_NOT_FOUND)
-    
-#     post.likes += 1
-#     post.save()
-#     return Response({'message': 'Post liked successfully'})
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-
-# def dislike_post(request, post_id):
-#     try:
-#         post = Post.objects.get(pk=post_id)
-#     except Post.DoesNotExist:
-#         return Response(status=status.HTTP_404_NOT_FOUND)
-    
-#     post.dislikes += 1
-#     post.save()
-#     return Response({'message': 'Post disliked successfully'})
-
-# # =============================COMMENTS=================================
-
-# # =============================USERS=================================
-
+    # Check if the user has already liked the reply
+    if not PostReplyLike.objects.filter(user=request.user, reply=reply).exists():
+        PostReplyLike.objects.create(user=request.user, reply=reply)
+        return Response({'message': 'Reply liked successfully'}, status=status.HTTP_201_CREATED)
+    else:
+        return Response({'message': 'You have already liked this reply'}, status=status.HTTP_400_BAD_REQUEST)
 
 # ======================================================================
 @api_view(['POST'])
