@@ -3,12 +3,14 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.http import Http404
 from rest_framework import status
-from rest_framework.decorators import ( api_view,permission_classes, authentication_classes)
+from rest_framework.decorators import ( api_view,permission_classes, authentication_classes, parser_classes)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.parsers import MultiPartParser, FormParser
+import cloudinary.uploader
 
 # ====  USER & GRADES  ======================================================================================================
 from users.models import User, Grade, Subject
@@ -213,6 +215,20 @@ def create_announcement(request):
         return Response(serializer.data)
     else:
         return Response(serializer.errors)
+    
+
+# ------------ Quill ----------------------
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def upload_image(request):
+    if 'image' not in request.FILES:
+        return Response({'error': 'No image provided'}, status=400)
+
+    image = request.FILES['image']
+    upload_result = cloudinary.uploader.upload(image)
+    
+    return Response({'image_url': upload_result['secure_url']})
+
 
 @api_view(["GET"])
 # @permission_classes([IsAuthenticated])

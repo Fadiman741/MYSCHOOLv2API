@@ -28,7 +28,7 @@ from .views import ( grade_subject_list, like_comment, like_reply, post_detail_c
 # ==== MENU DROPDOWN ======
 from .views import (grade_list, grade_detail, subject_list, subject_detail);
 # ==== ANNOUCEMENTS =====================
-from .views import announcement_list,create_announcement,get_announcement,update_announcement,like_announcement,add_announcement_comment, like_announcement_coment
+from .views import announcement_list,create_announcement,upload_image,get_announcement,update_announcement,like_announcement,add_announcement_comment, like_announcement_coment
 # ==== POSTS ========================
 from .views import get_posts_by_grade_and_subject
 # add_announcement_reply,like_announcement_reply, 
@@ -54,6 +54,7 @@ urlpatterns = [
 
     # =====  ANNOUNCEMENTS  =====
     path("create_announcement/", create_announcement, name="create_announcement"),
+    path('upload/', upload_image, name='upload_image'),# This url saves the images in the clouad storage
     path("announcements/", announcement_list, name="announcement_list"),
     path("update_announcement/<uuid:pk>/", update_announcement, name="update_announcement"),
     path("announcement/<uuid:pk>/", get_announcement, name="get_announcement"),

@@ -112,6 +112,7 @@ class Announcement(models.Model):
     def comment_count(self):
         """Returns the total number of comments for this announcement."""
         return self.announcement_comments.count()
+    
 class AnnouncementLike(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_likes")
