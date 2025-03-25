@@ -76,13 +76,22 @@ Institutions can:
 
 
 Technical Stack
+
 Component	Technology Used
+
 Backend	: Django REST Framework
+
 Database	: PostgreSQL (scalable, relational)
+
 Media Storage	: Cloudinary (image/video uploads)
+
 Authentication :	Token-based (JWT optional)
+
 Search	: Django-filter, PostgreSQL full-text search
+
 Deployment	: Docker, AWS/GCP, Nginx
+
+
 Conclusion
 
 The MYSCHOOLAPI is a scalable, role-based educational platform that enables:
