@@ -1,8 +1,10 @@
-MYSCHOOLAPI: Comprehensive Educational Platform API
-Overview
+#MYSCHOOLAPI: Comprehensive Educational Platform API
+
 
 The MYSCHOOLAPI is a robust Django REST Framework (DRF)-based API that powers an educational platform, integrating PostgreSQL for data storage and Cloudinary for media management. It facilitates grade-based subject discussions, social interactions (posts, comments, replies, likes), tutor discovery, and institution-specific content creation with rich media support.
-Core Features & Implementation
+
+##Core Features & Implementation
+
 1. User Roles & Authentication
 
 The system supports four distinct user roles:
@@ -15,31 +17,15 @@ The system supports four distinct user roles:
 
     Institutions – Can publish articles with custom styling and media attachments.
 
-
 2. Grade-Subject Management (Admin)
 
-Admins can:
+  Admins can:
 
     Add grades (e.g., Grade 10, Grade 11).
 
     Assign subjects (e.g., Mathematics, Physics) to each grade.
 
     Each grade-subject pair acts as a discussion room.
-
-Implementation Details
-
-    Models:
-
-    class Grade(models.Model):
-        name = models.CharField(max_length=50)  # e.g., "Grade 10"
-
-    class Subject(models.Model):
-        name = models.CharField(max_length=100)
-        grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
-
-    Admin Interface:
-        Django Admin or a custom DRF endpoint for CRUD operations.
-        Only admins (IsAdminUser) can modify grades/subjects.
 
 3. Discussion System (Posts, Comments, Replies, Likes)
 
@@ -54,7 +40,6 @@ Users can:
     Like posts, comments, or replies.
 
     Attach images/videos (via Cloudinary).
-
 
 4. Tutor Discovery System
 
@@ -75,9 +60,9 @@ Institutions can:
 
 
 
-Technical Stack
+#Technical Stack
 
-Component	Technology Used
+##Component	Technology Used
 
 Backend	: Django REST Framework
 
@@ -92,9 +77,11 @@ Search	: Django-filter, PostgreSQL full-text search
 Deployment	: Docker, AWS/GCP, Nginx
 
 
-Conclusion
 
-The MYSCHOOLAPI is a scalable, role-based educational platform that enables:
+
+#Conclusion
+
+####The MYSCHOOLAPI is a scalable, role-based educational platform that enables:
 
 ✅ Grade-subject discussions (like virtual classrooms)
 
