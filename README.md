@@ -88,6 +88,9 @@ Conclusion
 The MYSCHOOLAPI is a scalable, role-based educational platform that enables:
 
 ✅ Grade-subject discussions (like virtual classrooms)
+
 ✅ Social interactions (posts, comments, likes)
+
 ✅ Tutor discovery (search by subject/location)
+
 ✅ Institution publishing (rich media articles)    
