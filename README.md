@@ -15,25 +15,6 @@ The system supports four distinct user roles:
 
     Institutions – Can publish articles with custom styling and media attachments.
 
-Implementation Details
-
-    User Model extends Django’s AbstractUser with role-based fields:
-    python
-    Copy
-
-    class User(AbstractUser):
-        ROLE_CHOICES = [
-            ('student', 'Student'),
-            ('teacher', 'Teacher'),
-            ('tutor', 'Tutor'),
-            ('institution', 'Institution'),
-        ]
-        role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-        # Additional fields: profile_picture (Cloudinary), subjects, experience, etc.
-
-    Token-based authentication (TokenAuthentication) ensures secure access.
-
-    Permissions (IsAuthenticated, IsAdminUser, custom permission classes) restrict actions based on roles.
 
 2. Grade-Subject Management (Admin)
 
@@ -57,9 +38,7 @@ Implementation Details
         grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
 
     Admin Interface:
-
         Django Admin or a custom DRF endpoint for CRUD operations.
-
         Only admins (IsAdminUser) can modify grades/subjects.
 
 3. Discussion System (Posts, Comments, Replies, Likes)
@@ -76,17 +55,6 @@ Users can:
 
     Attach images/videos (via Cloudinary).
 
-Implementation Details
-
-    API Endpoints:
-
-        POST /api/posts/ – Create a post.
-
-        GET /api/posts/?subject_id=<id> – Fetch posts for a subject.
-
-        POST /api/comments/ – Add a comment.
-
-        POST /api/likes/ – Like a post/comment/reply.
 
 4. Tutor Discovery System
 
@@ -118,6 +86,7 @@ Deployment	: Docker, AWS/GCP, Nginx
 Conclusion
 
 The MYSCHOOLAPI is a scalable, role-based educational platform that enables:
+
 ✅ Grade-subject discussions (like virtual classrooms)
 ✅ Social interactions (posts, comments, likes)
 ✅ Tutor discovery (search by subject/location)
